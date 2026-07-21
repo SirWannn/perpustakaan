@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,13 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Tabel untuk Buku
 model Buku {
-  id          Int          @id @default(autoincrement()) // Primary key rahasia untuk relasi database
-  kodeBuku    String       // Kolom baru: Diisi manual dan boleh ada kode yang sama
+  id          Int          @id @default(autoincrement())
+  kodeBuku    String
   judul       String
   penulis     String
-  penerbit    String?
   tahunTerbit Int?
   stok        Int          @default(0)
   peminjaman  Peminjaman[] // Relasi ke tabel peminjaman
@@ -26,26 +19,24 @@ model Buku {
   updatedAt   DateTime     @updatedAt
 }
 
-// Tabel untuk User/Anggota (Opsional, untuk login nanti)
 model User {
   id          Int          @id @default(autoincrement())
   nama        String
   email       String       @unique
   password    String
-  peminjaman  Peminjaman[] // Relasi ke tabel peminjaman
   createdAt   DateTime     @default(now())
 }
 
-// Tabel untuk Transaksi Peminjaman
 model Peminjaman {
   id              Int       @id @default(autoincrement())
-  bukuId          Int
-  userId          Int
+  kodePinjam      String    
+  namaPeminjam    String    
+  bukuId          Int       
   tanggalPinjam   DateTime  @default(now())
-  tanggalKembali  DateTime? // Kosong jika belum dikembalikan
-  status          String    @default("DIPINJAM") // DIPINJAM atau DIKEMBALIKAN
+  tenggatWaktu    DateTime
+  tanggalKembali  DateTime? 
+  status          String    @default("Dipinjam") 
   
-  // Relasi
+  // Relasi hanya ke buku
   buku Buku @relation(fields: [bukuId], references: [id])
-  user User @relation(fields: [userId], references: [id])
 }

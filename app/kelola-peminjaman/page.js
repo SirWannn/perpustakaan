@@ -1,42 +1,69 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
-import { initialBooks, initialLoans, statusStyles } from '@/lib/data';
-import { UserIcon, BookIcon, SaveIcon, UndoIcon } from '@/components/icons';
+import { statusStyles } from '@/lib/data'; // Pastikan ini masih ada di lib/data.js
+import { UserIcon, BookIcon, SaveIcon, UndoIcon, ChevronLeftIcon, ChevronRightIcon } from '@/components/icons';
 
-const PAGE_SIZE = 3;
+const PAGE_SIZE = 5;
 
-function formatDate(date) {
+// Fungsi format tanggal untuk tampilan
+function formatDate(dateString) {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
   return date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function addDays(date, days) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
 export default function KelolaPeminjamanPage() {
-  const [loans, setLoans] = useState(initialLoans);
+  const [loans, setLoans] = useState([]);
+  const [books, setBooks] = useState([]); // Daftar buku dari DB untuk pilihan form
   const [studentName, setStudentName] = useState('');
-  const [selectedBook, setSelectedBook] = useState('');
+  const [selectedBook, setSelectedBook] = useState({ id: null, title: '' });
   const [bookQuery, setBookQuery] = useState('');
   const [showBookOptions, setShowBookOptions] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Popups
+  const [notification, setNotification] = useState({ show: false, message: '' });
+  const [returnConfirm, setReturnConfirm] = useState({ show: false, loanData: null });
+
+  // Fetch Data Peminjaman & Data Buku
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const resLoans = await fetch('/api/peminjaman');
+        const dataLoans = await resLoans.json();
+        setLoans(dataLoans);
+
+        const resBooks = await fetch('/api/buku');
+        const dataBooks = await resBooks.json();
+        setBooks(dataBooks);
+      } catch (error) {
+        console.error("Gagal load data", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const filteredBookOptions = useMemo(() => {
-    if (!bookQuery) return initialBooks;
-    return initialBooks.filter((b) => b.title.toLowerCase().includes(bookQuery.toLowerCase()));
-  }, [bookQuery]);
+    if (!bookQuery) return books.filter(b => b.stok > 0); // Hanya tampilkan buku yang ada stoknya
+    return books.filter((b) => 
+      b.judul.toLowerCase().includes(bookQuery.toLowerCase()) && b.stok > 0
+    );
+  }, [bookQuery, books]);
 
   const filteredLoans = useMemo(() => {
     return loans.filter(
       (l) =>
-        l.student.toLowerCase().includes(search.toLowerCase()) ||
-        l.book.toLowerCase().includes(search.toLowerCase())
+        l.namaPeminjam.toLowerCase().includes(search.toLowerCase()) ||
+        l.buku.judul.toLowerCase().includes(search.toLowerCase()) ||
+        l.kodePinjam.toLowerCase().includes(search.toLowerCase())
     );
   }, [loans, search]);
 
@@ -47,42 +74,84 @@ export default function KelolaPeminjamanPage() {
     currentPage * PAGE_SIZE
   );
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (!studentName.trim() || !selectedBook) return;
+    if (!studentName.trim() || !selectedBook.id) {
+      setNotification({ show: true, message: 'Harap lengkapi nama siswa dan pilih buku.' });
+      return;
+    }
 
     const today = new Date();
-    const due = addDays(today, 7);
-    const nextId = `#PJ-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(
-      today.getDate()
-    ).padStart(2, '0')}-${String(loans.length + 1).padStart(2, '0')}`;
+    const due = new Date();
+    due.setDate(today.getDate() + 7); // Tenggat waktu 7 hari
 
-    const newLoan = {
-      id: nextId,
-      student: studentName.trim(),
-      class: '-',
-      book: selectedBook,
-      borrowedDate: formatDate(today),
-      dueDate: formatDate(due),
-      status: 'Dipinjam',
-      returnedDate: null,
+    const nextId = `#PJ-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+
+    const newLoanData = {
+      kodePinjam: nextId,
+      namaPeminjam: studentName.trim(),
+      bukuId: selectedBook.id,
+      tenggatWaktu: due.toISOString(),
     };
 
-    setLoans((prev) => [newLoan, ...prev]);
-    setStudentName('');
-    setSelectedBook('');
-    setBookQuery('');
-    setPage(1);
+    try {
+      const res = await fetch('/api/peminjaman', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLoanData),
+      });
+
+      if (res.ok) {
+        const savedLoan = await res.json();
+        setLoans((prev) => [savedLoan, ...prev]);
+        
+        // Update stok buku di state lokal agar form tidak perlu direfresh
+        setBooks(books.map(b => b.id === selectedBook.id ? { ...b, stok: b.stok - 1 } : b));
+
+        setStudentName('');
+        setSelectedBook({ id: null, title: '' });
+        setBookQuery('');
+        setPage(1);
+        setNotification({ show: true, message: 'Peminjaman berhasil dicatat!' });
+      } else {
+        setNotification({ show: true, message: 'Gagal mencatat peminjaman.' });
+      }
+    } catch (error) {
+      console.error(error);
+      setNotification({ show: true, message: 'Terjadi kesalahan sistem.' });
+    }
   }
 
-  function handleReturn(id) {
-    setLoans((prev) =>
-      prev.map((loan) =>
-        loan.id === id
-          ? { ...loan, status: 'Selesai', returnedDate: formatDate(new Date()) }
-          : loan
-      )
-    );
+  function handleReturnClick(loan) {
+    setReturnConfirm({ show: true, loanData: loan });
+  }
+
+  async function executeReturn() {
+    const loan = returnConfirm.loanData;
+    try {
+      const res = await fetch('/api/peminjaman', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: loan.id, bukuId: loan.bukuId }),
+      });
+
+      if (res.ok) {
+        const updatedLoan = await res.json();
+        setLoans((prev) => prev.map((l) => (l.id === loan.id ? updatedLoan : l)));
+        
+        // Update stok buku di state lokal
+        setBooks(books.map(b => b.id === loan.bukuId ? { ...b, stok: b.stok + 1 } : b));
+        
+        setNotification({ show: true, message: 'Buku berhasil dikembalikan!' });
+      } else {
+        setNotification({ show: true, message: 'Gagal memproses pengembalian.' });
+      }
+    } catch (error) {
+      console.error(error);
+      setNotification({ show: true, message: 'Terjadi kesalahan sistem.' });
+    } finally {
+      setReturnConfirm({ show: false, loanData: null });
+    }
   }
 
   return (
@@ -92,58 +161,66 @@ export default function KelolaPeminjamanPage() {
       <main className="flex-1 px-6 md:px-10 py-8 max-w-6xl">
         <Header searchValue={search} onSearchChange={setSearch} />
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8 relative overflow-hidden">
-          <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-blue-50 pointer-events-none" />
+        {/* Hapus overflow-hidden dari sini */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8 relative">
+          
+          {/* Pindahkan pembungkus overflow-hidden khusus untuk dekorasi latar saja */}
+          <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+            <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-blue-50" />
+          </div>
+
           <h3 className="relative flex items-center gap-2 font-semibold text-gray-800 mb-5">
             <span className="text-brand text-xl leading-none">+</span> Catat Peminjaman Baru
           </h3>
 
           <form onSubmit={handleSubmit} className="relative grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
             <div>
-              <label className="block text-sm text-gray-600 mb-1.5">Nama Siswa</label>
+              <label className="block text-sm text-gray-600 mb-1.5">Nama Peminjam</label>
               <div className="relative">
                 <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
+                  required
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="Masukkan nama lengkap siswa..."
+                  placeholder="Masukkan nama lengkap..."
                   className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
             </div>
 
             <div className="relative">
-              <label className="block text-sm text-gray-600 mb-1.5">Pilih Buku</label>
+              <label className="block text-sm text-gray-600 mb-1.5">Pilih Buku (Tersedia)</label>
               <div className="relative">
                 <BookIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
-                  value={selectedBook || bookQuery}
+                  required
+                  value={selectedBook.title || bookQuery}
                   onChange={(e) => {
                     setBookQuery(e.target.value);
-                    setSelectedBook('');
+                    setSelectedBook({ id: null, title: '' });
                     setShowBookOptions(true);
                   }}
                   onFocus={() => setShowBookOptions(true)}
-                  onBlur={() => setTimeout(() => setShowBookOptions(false), 150)}
+                  onBlur={() => setTimeout(() => setShowBookOptions(false), 200)}
                   placeholder="Cari / Pilih judul buku..."
-                  className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 cursor-pointer"
                 />
               </div>
               {showBookOptions && filteredBookOptions.length > 0 && (
                 <ul className="absolute z-10 mt-1 w-full bg-white border border-gray-100 rounded-lg shadow-md max-h-48 overflow-auto">
                   {filteredBookOptions.map((b) => (
-                    <li key={b.code}>
+                    <li key={b.id}>
                       <button
                         type="button"
                         onMouseDown={() => {
-                          setSelectedBook(b.title);
+                          setSelectedBook({ id: b.id, title: b.judul });
                           setBookQuery('');
                           setShowBookOptions(false);
                         }}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex justify-between items-center"
                       >
-                        {b.title}{' '}
-                        <span className="text-gray-400 text-xs">· stok {b.stock}</span>
+                        <span className="truncate pr-2">{b.judul}</span>
+                        <span className="text-gray-400 text-xs shrink-0 bg-gray-100 px-2 py-0.5 rounded-md">Stok: {b.stok}</span>
                       </button>
                     </li>
                   ))}
@@ -163,9 +240,6 @@ export default function KelolaPeminjamanPage() {
 
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-800">Daftar Peminjaman Aktif</h3>
-          <button className="text-sm text-gray-500 flex items-center gap-1 hover:text-gray-700">
-            Filter ▾
-          </button>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -181,53 +255,58 @@ export default function KelolaPeminjamanPage() {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((loan) => (
-                <tr key={loan.id} className="border-b border-gray-50 last:border-0 align-top">
-                  <td className="px-5 py-4 text-gray-400">{loan.id}</td>
-                  <td className="px-5 py-4">
-                    <p className="font-medium text-gray-800">
-                      {loan.student} <span className="text-gray-400 font-normal">(Kelas {loan.class})</span>
-                    </p>
-                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                      <BookIcon className="w-3 h-3" /> {loan.book}
-                    </p>
-                  </td>
-                  <td className="px-5 py-4 text-gray-600">{loan.borrowedDate}</td>
-                  <td className={`px-5 py-4 font-medium ${loan.status === 'Terlambat' ? 'text-red-500' : 'text-gray-600'}`}>
-                    {loan.dueDate}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${
-                        statusStyles[loan.status] || 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {loan.status === 'Terlambat' && '⚠ '}
-                      {loan.status === 'Selesai' && '✓ '}
-                      {loan.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    {loan.status === 'Selesai' ? (
-                      <span className="text-xs text-gray-400">
-                        Dikembalikan ({loan.returnedDate})
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleReturn(loan.id)}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 px-3 py-1.5 rounded-lg transition-colors"
-                      >
-                        <UndoIcon className="w-3.5 h-3.5" />
-                        Kembalikan
-                      </button>
-                    )}
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-10 text-center text-gray-500">
+                    Memuat data dari database...
                   </td>
                 </tr>
-              ))}
-              {paginated.length === 0 && (
+              ) : (
+                paginated.map((loan) => (
+                  <tr key={loan.id} className="border-b border-gray-50 last:border-0 align-top">
+                    <td className="px-5 py-4 text-gray-400 font-medium">{loan.kodePinjam}</td>
+                    <td className="px-5 py-4">
+                      <p className="font-semibold text-gray-800">{loan.namaPeminjam}</p>
+                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                        <BookIcon className="w-3 h-3" /> {loan.buku?.judul || 'Buku Dihapus'}
+                      </p>
+                    </td>
+                    <td className="px-5 py-4 text-gray-600">{formatDate(loan.tanggalPinjam)}</td>
+                    <td className={`px-5 py-4 font-medium ${loan.status === 'Terlambat' ? 'text-red-500' : 'text-gray-600'}`}>
+                      {formatDate(loan.tenggatWaktu)}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${
+                          statusStyles?.[loan.status] || 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {loan.status === 'Selesai' && '✓ '}
+                        {loan.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      {loan.status === 'Selesai' ? (
+                        <span className="text-xs text-gray-400">
+                          Dikembalikan ({formatDate(loan.tanggalKembali)})
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleReturnClick(loan)}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          <UndoIcon className="w-3.5 h-3.5" />
+                          Kembalikan
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+              {!isLoading && paginated.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
-                    Tidak ada data peminjaman yang cocok.
+                    Tidak ada data peminjaman.
                   </td>
                 </tr>
               )}
@@ -245,19 +324,62 @@ export default function KelolaPeminjamanPage() {
                 disabled={currentPage === 1}
                 className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
               >
-                ‹
+                <ChevronLeftIcon className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
               >
-                ›
+                <ChevronRightIcon className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
       </main>
+
+      {/* POPUP 1: KONFIRMASI PENGEMBALIAN */}
+      {returnConfirm.show && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Konfirmasi Pengembalian</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Buku <b>"{returnConfirm.loanData?.buku?.judul}"</b> telah dikembalikan oleh peminjam?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setReturnConfirm({ show: false, loanData: null })}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={executeReturn}
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium py-2.5 rounded-lg transition-colors"
+              >
+                Ya, Selesai
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP 2: NOTIFIKASI SUKSES / GAGAL */}
+      {notification.show && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Informasi</h3>
+            <p className="text-sm text-gray-600 mb-6">{notification.message}</p>
+            <button
+              onClick={() => setNotification({ show: false, message: '' })}
+              className="w-full bg-brand hover:bg-brand-dark text-white font-medium py-2.5 rounded-lg transition-colors"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

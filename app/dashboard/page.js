@@ -1,44 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import StatCard from '@/components/StatCard';
 import { BookIcon } from '@/components/icons';
 
-const trend = [
-  { label: 'Sen', value: 45 },
-  { label: 'Sel', value: 68 },
-  { label: 'Rab', value: 38 },
-  { label: 'Kam', value: 92 },
-  { label: 'Jum', value: 58 },
-  { label: 'Sab', value: 80 },
-];
+// Fungsi untuk menghitung jarak waktu menjadi "Hari ini", "Kemarin", dll.
+function getRelativeTime(dateString) {
+  const date = new Date(dateString);
+  const today = new Date();
+  
+  // Reset jam agar perhitungan murni berdasarkan hari
+  date.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  
+  const diffTime = Math.abs(today - date);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'Hari ini';
+  if (diffDays === 1) return 'Kemarin';
+  return `${diffDays} Hari lalu`;
+}
 
-const recentLoans = [
-  {
-    title: 'Petualangan Tata Surya',
-    borrower: 'Budi (Kelas 4)',
-    time: 'Hari ini',
-    color: 'bg-blue-100',
-  },
-  {
-    title: 'Kancil dan Buaya',
-    borrower: 'Siti (Kelas 2)',
-    time: 'Kemarin',
-    color: 'bg-green-100',
-  },
-  {
-    title: 'Matematika Menyenangkan',
-    borrower: 'Andi (Kelas 5)',
-    time: '2 Hari lalu',
-    color: 'bg-gray-100',
-  },
-];
+const colors = ['bg-blue-100', 'bg-green-100', 'bg-gray-100', 'bg-amber-100'];
 
 export default function DashboardPage() {
   const [search, setSearch] = useState('');
-  const maxTrend = Math.max(...trend.map((t) => t.value));
+  const [data, setData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const res = await fetch('/api/dashboard');
+        const json = await res.json();
+        setData(json);
+      } catch (error) {
+        console.error("Gagal load dashboard", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, []);
+
+  // Hindari error jika trend belum load
+  const trend = data?.trend || [];
+  const maxTrend = trend.length > 0 ? Math.max(...trend.map((t) => t.value)) : 1;
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -57,75 +66,91 @@ export default function DashboardPage() {
             icon="📄"
             iconBg="bg-blue-100"
             iconColor="text-blue-600"
-            badge="+12 Minggu ini"
-            badgeColor="bg-green-100 text-green-700"
+            badge={isLoading ? "..." : "Terdaftar"}
+            badgeColor="bg-blue-50 text-blue-700"
             label="Total Buku"
-            value="1,245"
+            value={isLoading ? "..." : data?.stats?.totalBuku}
           />
           <StatCard
             icon="👥"
             iconBg="bg-green-100"
             iconColor="text-green-600"
-            badge="Aktif"
+            badge="Peminjam Unik"
             badgeColor="bg-gray-100 text-gray-500"
             label="Total Peminjam"
-            value="312"
+            value={isLoading ? "..." : data?.stats?.totalPeminjam}
           />
           <StatCard
             icon="↩️"
             iconBg="bg-amber-100"
             iconColor="text-amber-700"
-            badge="5 Terlambat"
+            badge={isLoading ? "..." : `${data?.stats?.terlambat} Terlambat`}
             badgeColor="bg-red-100 text-red-600"
             label="Buku yang Dipinjam"
-            value="48"
+            value={isLoading ? "..." : data?.stats?.dipinjam}
           />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* TREN PEMINJAMAN */}
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-800">Tren Peminjaman</h3>
-              <button className="text-xs text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1 hover:bg-gray-50">
-                Bulan Ini ▾
-              </button>
+              <h3 className="font-semibold text-gray-800">Tren Peminjaman (6 Hari Terakhir)</h3>
             </div>
+            
             <div className="flex items-end justify-between gap-3 h-52 px-2">
-              {trend.map((t) => (
-                <div key={t.label} className="flex flex-col items-center gap-2 flex-1">
-                  <div
-                    className="w-full max-w-10 rounded-t-md bg-blue-200 hover:bg-brand transition-colors"
-                    style={{ height: `${(t.value / maxTrend) * 160}px` }}
-                    title={`${t.label}: ${t.value} peminjaman`}
-                  />
-                  <span className="text-xs text-gray-400">{t.label}</span>
+              {isLoading ? (
+                <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                  Memuat grafik...
                 </div>
-              ))}
+              ) : (
+                trend.map((t) => (
+                  <div key={t.label} className="flex flex-col items-center gap-2 flex-1">
+                    <div
+                      className="w-full max-w-10 rounded-t-md bg-blue-200 hover:bg-brand transition-colors"
+                      // Minimal height 4px agar tetap terlihat meski nilainya 0
+                      style={{ height: `${Math.max((t.value / (maxTrend || 1)) * 160, 4)}px` }}
+                      title={`${t.label}: ${t.value} peminjaman`}
+                    />
+                    <span className="text-xs text-gray-400 font-medium">{t.label}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          {/* PEMINJAMAN TERBARU */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-800">Peminjaman Terbaru</h3>
               <a href="/kelola-peminjaman" className="text-xs text-brand font-medium hover:underline">
                 Lihat Semua
               </a>
             </div>
-            <ul className="space-y-4">
-              {recentLoans.map((loan) => (
-                <li key={loan.title} className="flex items-start gap-3">
-                  <div className={`w-9 h-11 rounded-md ${loan.color} flex items-center justify-center text-gray-500 shrink-0`}>
-                    <BookIcon className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{loan.title}</p>
-                    <p className="text-xs text-gray-500">Dipinjam oleh: {loan.borrower}</p>
-                  </div>
-                  <span className="text-xs text-gray-400 whitespace-nowrap">{loan.time}</span>
-                </li>
-              ))}
+            <ul className="space-y-4 flex-1">
+              {isLoading ? (
+                <li className="text-sm text-gray-400 text-center py-4">Memuat data...</li>
+              ) : data?.recentLoans?.length === 0 ? (
+                <li className="text-sm text-gray-400 text-center py-4">Belum ada peminjaman.</li>
+              ) : (
+                data?.recentLoans?.map((loan, index) => (
+                  <li key={loan.id} className="flex items-start gap-3">
+                    <div className={`w-9 h-11 rounded-md ${colors[index % colors.length]} flex items-center justify-center text-gray-500 shrink-0`}>
+                      <BookIcon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{loan.buku?.judul || 'Buku Dihapus'}</p>
+                      <p className="text-xs text-gray-500 truncate">Oleh: {loan.namaPeminjam}</p>
+                    </div>
+                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                      {getRelativeTime(loan.tanggalPinjam)}
+                    </span>
+                  </li>
+                ))
+              )}
             </ul>
           </div>
+          
         </div>
       </main>
     </div>

@@ -15,7 +15,6 @@ import {
 
 const PAGE_SIZE = 5;
 
-// State disederhanakan: Kode, Judul, Pengarang (penulis), Tahun, Stok
 const emptyForm = { 
   kodeBuku: '', 
   judul: '', 
@@ -31,6 +30,12 @@ export default function KelolaBukuPage() {
   const [form, setForm] = useState(emptyForm);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [editId, setEditId] = useState(null);
+
+  // STATE BARU: Untuk popup notifikasi sukses/gagal
+  const [notification, setNotification] = useState({ show: false, message: '' });
+  // STATE BARU: Untuk popup konfirmasi hapus
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
 
   const fetchBooks = async () => {
     setIsLoading(true);
@@ -64,33 +69,98 @@ export default function KelolaBukuPage() {
     currentPage * PAGE_SIZE
   );
 
+  const closeModal = () => {
+    setShowModal(false);
+    setForm(emptyForm);
+    setEditId(null);
+  };
+
+  const handleEditClick = (book) => {
+    setForm({
+      kodeBuku: book.kodeBuku,
+      judul: book.judul,
+      penulis: book.penulis,
+      tahunTerbit: book.tahunTerbit || '',
+      stok: book.stok || ''
+    });
+    setEditId(book.id);
+    setShowModal(true);
+  };
+
   async function handleAddBook(e) {
     e.preventDefault();
     if (!form.judul.trim() || !form.kodeBuku.trim()) return;
 
     try {
-      const res = await fetch('/api/buku', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
+      if (editId) {
+        // --- LOGIKA UPDATE (PUT) ---
+        const res = await fetch('/api/buku', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editId, ...form }),
+        });
 
-      if (res.ok) {
-        const newBook = await res.json();
-        setBooks((prev) => [newBook, ...prev]);
-        setForm(emptyForm);
-        setShowModal(false);
-        setPage(1);
+        if (res.ok) {
+          const updatedBook = await res.json();
+          setBooks((prev) => prev.map((b) => (b.id === editId ? updatedBook : b)));
+          closeModal();
+          // Tampilkan Notifikasi Sukses
+          setNotification({ show: true, message: 'Buku berhasil diperbarui!' });
+        } else {
+          setNotification({ show: true, message: 'Gagal memperbarui buku.' });
+        }
       } else {
-        alert("Gagal menyimpan buku");
+        // --- LOGIKA CREATE (POST) ---
+        const res = await fetch('/api/buku', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+
+        if (res.ok) {
+          const newBook = await res.json();
+          setBooks((prev) => [newBook, ...prev]);
+          closeModal();
+          setPage(1);
+          // Tampilkan Notifikasi Sukses
+          setNotification({ show: true, message: 'Buku baru berhasil ditambahkan!' });
+        } else {
+          setNotification({ show: true, message: 'Gagal menambahkan buku.' });
+        }
       }
     } catch (error) {
       console.error("Error submit:", error);
+      setNotification({ show: true, message: 'Terjadi kesalahan sistem.' });
     }
   }
 
-  function handleDelete(id) {
-    setBooks((prev) => prev.filter((b) => b.id !== id));
+  // FUNGSI BARU: Buka popup konfirmasi hapus (bukan langsung hapus)
+  function handleDeleteClick(id) {
+    setDeleteConfirm({ show: true, id });
+  }
+
+  // FUNGSI BARU: Eksekusi hapus jika user menekan "Ya" di popup
+  async function executeDelete() {
+    const id = deleteConfirm.id;
+    try {
+      const res = await fetch(`/api/buku?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        setBooks((prev) => prev.filter((b) => b.id !== id));
+        // Tampilkan Notifikasi Sukses
+        setNotification({ show: true, message: 'Buku berhasil dihapus!' });
+      } else {
+        setNotification({ show: true, message: 'Gagal menghapus buku.' });
+      }
+    } catch (error) {
+      console.error("Error delete:", error);
+      setNotification({ show: true, message: 'Terjadi kesalahan sistem.' });
+    } finally {
+      // Tutup popup konfirmasi
+      setDeleteConfirm({ show: false, id: null });
+    }
   }
 
   return (
@@ -110,7 +180,11 @@ export default function KelolaBukuPage() {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setEditId(null);
+            setForm(emptyForm);
+            setShowModal(true);
+          }}
           className="w-full flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white font-medium py-3 rounded-xl mb-6 transition-colors"
         >
           <PlusIcon className="w-4 h-4" />
@@ -157,11 +231,14 @@ export default function KelolaBukuPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-brand hover:bg-gray-50">
+                        <button 
+                          onClick={() => handleEditClick(book)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-brand hover:bg-gray-50"
+                        >
                           <EditIcon className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(book.id)}
+                          onClick={() => handleDeleteClick(book.id)} // Panggil popup konfirmasi
                           className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50"
                         >
                           <TrashIcon className="w-4 h-4" />
@@ -206,18 +283,21 @@ export default function KelolaBukuPage() {
         </div>
       </main>
 
+      {/* POPUP 1: FORM TAMBAH/EDIT BUKU */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-20 px-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 relative">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 relative shadow-xl">
             <button
-              onClick={() => setShowModal(false)}
+              onClick={closeModal}
               className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
             >
               <XIcon className="w-5 h-5" />
             </button>
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Tambah Buku Baru</h3>
+            <h3 className="text-lg font-bold text-gray-800 mb-4">
+              {editId ? 'Edit Buku' : 'Tambah Buku Baru'}
+            </h3>
+            
             <form onSubmit={handleAddBook} className="space-y-3">
-              
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Kode Buku</label>
                 <input
@@ -228,7 +308,6 @@ export default function KelolaBukuPage() {
                   placeholder="Contoh: B001"
                 />
               </div>
-
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Judul Buku</label>
                 <input
@@ -239,7 +318,6 @@ export default function KelolaBukuPage() {
                   placeholder="Masukkan judul buku"
                 />
               </div>
-              
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Pengarang</label>
                 <input
@@ -250,7 +328,6 @@ export default function KelolaBukuPage() {
                   placeholder="Nama pengarang"
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">Tahun Terbit</label>
@@ -274,17 +351,59 @@ export default function KelolaBukuPage() {
                   />
                 </div>
               </div>
-              
               <button
                 type="submit"
                 className="w-full bg-brand hover:bg-brand-dark text-white font-medium py-2.5 rounded-lg mt-4 transition-colors"
               >
-                Simpan ke Database
+                {editId ? 'Simpan Perubahan' : 'Simpan ke Database'}
               </button>
             </form>
           </div>
         </div>
       )}
+
+      {/* POPUP 2: KONFIRMASI HAPUS */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Konfirmasi Hapus</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Apakah Anda yakin ingin menghapus buku ini? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm({ show: false, id: null })}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={executeDelete}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 rounded-lg transition-colors"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP 3: NOTIFIKASI SUKSES / GAGAL */}
+      {notification.show && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Informasi</h3>
+            <p className="text-sm text-gray-600 mb-6">{notification.message}</p>
+            <button
+              onClick={() => setNotification({ show: false, message: '' })}
+              className="w-full bg-brand hover:bg-brand-dark text-white font-medium py-2.5 rounded-lg transition-colors"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

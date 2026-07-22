@@ -168,8 +168,8 @@ export default function KelolaBukuPage() {
       <Sidebar />
 
       <main className="flex-1 px-6 md:px-10 py-8 max-w-6xl">
-        <Header searchValue={search} onSearchChange={setSearch} />
-
+        <Header searchValue={search} onSearchChange={setSearch} placeholder="Cari buku..." />
+        
         <div className="flex items-start justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Kelola Buku</h2>

@@ -26,7 +26,6 @@ function getRelativeTime(dateString) {
 const colors = ['bg-blue-100', 'bg-green-100', 'bg-gray-100', 'bg-amber-100'];
 
 export default function DashboardPage() {
-  const [search, setSearch] = useState('');
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -54,7 +53,8 @@ export default function DashboardPage() {
       <Sidebar />
 
       <main className="flex-1 px-6 md:px-10 py-8 max-w-6xl">
-        <Header searchValue={search} onSearchChange={setSearch} />
+        {/* Menyembunyikan kolom pencarian khusus di halaman ini */}
+        <Header hideSearch={true} />
 
         <h2 className="text-2xl font-bold text-gray-800">Selamat Datang kembali!</h2>
         <p className="text-sm text-gray-500 mt-1 mb-6">

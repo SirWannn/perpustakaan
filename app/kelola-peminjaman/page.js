@@ -8,6 +8,7 @@ import { UserIcon, BookIcon, SaveIcon, UndoIcon, ChevronLeftIcon, ChevronRightIc
 
 const PAGE_SIZE = 5;
 
+// Fungsi format tanggal untuk tampilan
 function formatDate(dateString) {
   if (!dateString) return '-';
   const date = new Date(dateString);
@@ -18,7 +19,7 @@ export default function KelolaPeminjamanPage() {
   const [loans, setLoans] = useState([]);
   const [books, setBooks] = useState([]); 
   const [studentName, setStudentName] = useState('');
-  const [studentClass, setStudentClass] = useState(''); // STATE BARU UNTUK KELAS
+  const [studentClass, setStudentClass] = useState(''); 
   const [selectedBook, setSelectedBook] = useState({ id: null, title: '' });
   const [bookQuery, setBookQuery] = useState('');
   const [showBookOptions, setShowBookOptions] = useState(false);
@@ -26,9 +27,11 @@ export default function KelolaPeminjamanPage() {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Popups
   const [notification, setNotification] = useState({ show: false, message: '' });
   const [returnConfirm, setReturnConfirm] = useState({ show: false, loanData: null });
 
+  // Fetch Data Peminjaman & Data Buku
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -49,11 +52,16 @@ export default function KelolaPeminjamanPage() {
     fetchData();
   }, []);
 
+  // PENINGKATAN: Filter pencarian buku berdasarkan Judul ATAU Kode Buku
   const filteredBookOptions = useMemo(() => {
     if (!bookQuery) return books.filter(b => b.stok > 0); 
-    return books.filter((b) => 
-      b.judul.toLowerCase().includes(bookQuery.toLowerCase()) && b.stok > 0
-    );
+    const query = bookQuery.toLowerCase();
+    
+    return books.filter((b) => {
+      const judulMatch = b.judul?.toLowerCase().includes(query);
+      const kodeMatch = b.kodeBuku?.toLowerCase().includes(query);
+      return (judulMatch || kodeMatch) && b.stok > 0;
+    });
   }, [bookQuery, books]);
 
   const filteredLoans = useMemo(() => {
@@ -82,14 +90,14 @@ export default function KelolaPeminjamanPage() {
 
     const today = new Date();
     const due = new Date();
-    due.setDate(today.getDate() + 7); 
+    due.setDate(today.getDate() + 7); // Tenggat waktu 7 hari
 
     const nextId = `#PJ-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
 
     const newLoanData = {
       kodePinjam: nextId,
       namaPeminjam: studentName.trim(),
-      kelas: studentClass.trim(), // DATA KELAS DIKIRIM KE API
+      kelas: studentClass.trim(), 
       bukuId: selectedBook.id,
       tenggatWaktu: due.toISOString(),
     };
@@ -105,10 +113,11 @@ export default function KelolaPeminjamanPage() {
         const savedLoan = await res.json();
         setLoans((prev) => [savedLoan, ...prev]);
         
+        // Update stok buku di state lokal
         setBooks(books.map(b => b.id === selectedBook.id ? { ...b, stok: b.stok - 1 } : b));
 
         setStudentName('');
-        setStudentClass(''); // RESET KELAS
+        setStudentClass(''); 
         setSelectedBook({ id: null, title: '' });
         setBookQuery('');
         setPage(1);
@@ -158,7 +167,7 @@ export default function KelolaPeminjamanPage() {
       <Sidebar />
 
       <main className="flex-1 px-6 md:px-10 py-8 max-w-6xl">
-        <Header searchValue={search} onSearchChange={setSearch} />
+        <Header searchValue={search} onSearchChange={setSearch} placeholder="Cari peminjam atau buku..." />
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8 relative">
           <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
@@ -169,7 +178,6 @@ export default function KelolaPeminjamanPage() {
             <span className="text-brand text-xl leading-none">+</span> Catat Peminjaman Baru
           </h3>
 
-          {/* GRID DIPERBARUI UNTUK MENAMPUNG KELAS */}
           <form onSubmit={handleSubmit} className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[1.5fr_0.8fr_1.5fr_auto] gap-4 items-end">
             <div>
               <label className="block text-sm text-gray-600 mb-1.5">Nama Peminjam</label>
@@ -185,7 +193,6 @@ export default function KelolaPeminjamanPage() {
               </div>
             </div>
 
-            {/* INPUT KELAS BARU */}
             <div>
               <label className="block text-sm text-gray-600 mb-1.5">Kelas</label>
               <input
@@ -198,7 +205,7 @@ export default function KelolaPeminjamanPage() {
             </div>
 
             <div className="relative">
-              <label className="block text-sm text-gray-600 mb-1.5">Pilih Buku (Tersedia)</label>
+              <label className="block text-sm text-gray-600 mb-1.5">Cari & Pilih Buku</label>
               <div className="relative">
                 <BookIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -210,29 +217,46 @@ export default function KelolaPeminjamanPage() {
                     setShowBookOptions(true);
                   }}
                   onFocus={() => setShowBookOptions(true)}
-                  onBlur={() => setTimeout(() => setShowBookOptions(false), 200)}
-                  placeholder="Cari buku..."
+                  onBlur={() => setShowBookOptions(false)} // Disederhanakan
+                  placeholder="Ketik judul / kode buku..."
                   className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 cursor-pointer"
                 />
               </div>
-              {showBookOptions && filteredBookOptions.length > 0 && (
-                <ul className="absolute z-10 mt-1 w-full bg-white border border-gray-100 rounded-lg shadow-md max-h-48 overflow-auto">
-                  {filteredBookOptions.map((b) => (
-                    <li key={b.id}>
-                      <button
-                        type="button"
-                        onMouseDown={() => {
-                          setSelectedBook({ id: b.id, title: b.judul });
-                          setBookQuery('');
-                          setShowBookOptions(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex justify-between items-center"
-                      >
-                        <span className="truncate pr-2">{b.judul}</span>
-                        <span className="text-gray-400 text-xs shrink-0 bg-gray-100 px-2 py-0.5 rounded-md">Stok: {b.stok}</span>
-                      </button>
+              
+              {/* PENINGKATAN TAMPILAN DROPDOWN */}
+              {showBookOptions && (
+                <ul className="absolute z-20 mt-1 w-full bg-white border border-gray-100 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                  {filteredBookOptions.length > 0 ? (
+                    filteredBookOptions.map((b) => (
+                      <li key={b.id}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            // Mencegah input kehilangan fokus sebelum klik diproses
+                            e.preventDefault(); 
+                            setSelectedBook({ id: b.id, title: b.judul });
+                            setBookQuery('');
+                            setShowBookOptions(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-brand hover:text-white group flex flex-col transition-colors border-b border-gray-50 last:border-0"
+                        >
+                          <div className="flex justify-between items-start w-full gap-2">
+                            <span className="font-semibold truncate leading-tight">{b.judul}</span>
+                            <span className="text-brand text-[10px] font-bold bg-blue-50 px-2 py-0.5 rounded-md shrink-0 group-hover:bg-white group-hover:text-brand">
+                              Stok: {b.stok}
+                            </span>
+                          </div>
+                          <span className="text-gray-400 text-xs mt-1 group-hover:text-blue-100">
+                            Kode: {b.kodeBuku || '-'}
+                          </span>
+                        </button>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-4 py-4 text-sm text-gray-500 text-center">
+                      Buku tidak ditemukan atau stok habis.
                     </li>
-                  ))}
+                  )}
                 </ul>
               )}
             </div>
@@ -275,7 +299,6 @@ export default function KelolaPeminjamanPage() {
                   <tr key={loan.id} className="border-b border-gray-50 last:border-0 align-top">
                     <td className="px-5 py-4 text-gray-400 font-medium">{loan.kodePinjam}</td>
                     <td className="px-5 py-4">
-                      {/* TAMPILAN NAMA DAN KELAS */}
                       <p className="font-semibold text-gray-800">
                         {loan.namaPeminjam} <span className="text-gray-400 font-normal ml-1">(Kelas {loan.kelas || '-'})</span>
                       </p>
@@ -377,12 +400,18 @@ export default function KelolaPeminjamanPage() {
 
       {notification.show && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">Informasi</h3>
-            <p className="text-sm text-gray-600 mb-6">{notification.message}</p>
+          <div className="bg-white rounded-3xl w-full max-w-sm p-8 text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-green-500"></div>
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5 shadow-inner">
+              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Informasi</h3>
+            <p className="text-sm text-gray-500 mb-8">{notification.message}</p>
             <button
               onClick={() => setNotification({ show: false, message: '' })}
-              className="w-full bg-brand hover:bg-brand-dark text-white font-medium py-2.5 rounded-lg transition-colors"
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl transition-colors"
             >
               Tutup
             </button>

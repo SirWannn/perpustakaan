@@ -30,7 +30,8 @@ model User {
 model Peminjaman {
   id              Int       @id @default(autoincrement())
   kodePinjam      String    
-  namaPeminjam    String    
+  namaPeminjam    String
+  kelas           String?    
   bukuId          Int       
   tanggalPinjam   DateTime  @default(now())
   tenggatWaktu    DateTime
@@ -39,4 +40,13 @@ model Peminjaman {
   
   // Relasi hanya ke buku
   buku Buku @relation(fields: [bukuId], references: [id])
+}
+
+// Tabel untuk mencatat riwayat login
+model RiwayatLogin {
+  id        Int      @id @default(autoincrement())
+  waktu     DateTime @default(now())
+  perangkat String   // Menyimpan browser/device yang digunakan
+  ip        String   // Menyimpan alamat IP
+  status    String   // "Berhasil" atau "Gagal"
 }

@@ -20,7 +20,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     if (!username.trim() || !password.trim()) {
@@ -31,10 +31,26 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    // Simulasi proses login. Ganti bagian ini dengan pemanggilan API/autentikasi Anda.
-    setTimeout(() => {
-      router.push('/dashboard');
-    }, 400);
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (res.ok) {
+        // Jika login berhasil, refresh router agar middleware membaca cookie baru
+        router.refresh();
+        router.push('/dashboard');
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Username atau password salah.');
+      }
+    } catch (err) {
+      setError('Terjadi kesalahan koneksi.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

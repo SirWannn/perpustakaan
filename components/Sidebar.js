@@ -13,6 +13,11 @@ const menuItems = [
 export default function Sidebar() {
   const pathname = usePathname();
 
+  // Fungsi untuk memicu logout dengan full refresh
+  const handleLogout = () => {
+    window.location.href = '/api/logout';
+  };
+
   return (
     <aside className="hidden md:flex md:flex-col w-64 shrink-0 bg-white border-r border-gray-200 h-screen sticky top-0">
       <div className="flex items-center gap-3 px-6 py-6">
@@ -46,13 +51,14 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-3 pb-6">
-        <Link
-          href="/login"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+        {/* Tombol Logout diperbarui agar memicu API */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors w-full text-left"
         >
           <LogoutIcon className="w-4 h-4" />
           Keluar
-        </Link>
+        </button>
       </div>
     </aside>
   );

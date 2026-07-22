@@ -3,12 +3,11 @@
 import { useMemo, useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
-import { statusStyles } from '@/lib/data'; // Pastikan ini masih ada di lib/data.js
+import { statusStyles } from '@/lib/data'; 
 import { UserIcon, BookIcon, SaveIcon, UndoIcon, ChevronLeftIcon, ChevronRightIcon } from '@/components/icons';
 
 const PAGE_SIZE = 5;
 
-// Fungsi format tanggal untuk tampilan
 function formatDate(dateString) {
   if (!dateString) return '-';
   const date = new Date(dateString);
@@ -17,8 +16,9 @@ function formatDate(dateString) {
 
 export default function KelolaPeminjamanPage() {
   const [loans, setLoans] = useState([]);
-  const [books, setBooks] = useState([]); // Daftar buku dari DB untuk pilihan form
+  const [books, setBooks] = useState([]); 
   const [studentName, setStudentName] = useState('');
+  const [studentClass, setStudentClass] = useState(''); // STATE BARU UNTUK KELAS
   const [selectedBook, setSelectedBook] = useState({ id: null, title: '' });
   const [bookQuery, setBookQuery] = useState('');
   const [showBookOptions, setShowBookOptions] = useState(false);
@@ -26,11 +26,9 @@ export default function KelolaPeminjamanPage() {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Popups
   const [notification, setNotification] = useState({ show: false, message: '' });
   const [returnConfirm, setReturnConfirm] = useState({ show: false, loanData: null });
 
-  // Fetch Data Peminjaman & Data Buku
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -52,7 +50,7 @@ export default function KelolaPeminjamanPage() {
   }, []);
 
   const filteredBookOptions = useMemo(() => {
-    if (!bookQuery) return books.filter(b => b.stok > 0); // Hanya tampilkan buku yang ada stoknya
+    if (!bookQuery) return books.filter(b => b.stok > 0); 
     return books.filter((b) => 
       b.judul.toLowerCase().includes(bookQuery.toLowerCase()) && b.stok > 0
     );
@@ -62,6 +60,7 @@ export default function KelolaPeminjamanPage() {
     return loans.filter(
       (l) =>
         l.namaPeminjam.toLowerCase().includes(search.toLowerCase()) ||
+        (l.kelas && l.kelas.toLowerCase().includes(search.toLowerCase())) ||
         l.buku.judul.toLowerCase().includes(search.toLowerCase()) ||
         l.kodePinjam.toLowerCase().includes(search.toLowerCase())
     );
@@ -76,20 +75,21 @@ export default function KelolaPeminjamanPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!studentName.trim() || !selectedBook.id) {
-      setNotification({ show: true, message: 'Harap lengkapi nama siswa dan pilih buku.' });
+    if (!studentName.trim() || !studentClass.trim() || !selectedBook.id) {
+      setNotification({ show: true, message: 'Harap lengkapi nama, kelas, dan pilih buku.' });
       return;
     }
 
     const today = new Date();
     const due = new Date();
-    due.setDate(today.getDate() + 7); // Tenggat waktu 7 hari
+    due.setDate(today.getDate() + 7); 
 
     const nextId = `#PJ-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
 
     const newLoanData = {
       kodePinjam: nextId,
       namaPeminjam: studentName.trim(),
+      kelas: studentClass.trim(), // DATA KELAS DIKIRIM KE API
       bukuId: selectedBook.id,
       tenggatWaktu: due.toISOString(),
     };
@@ -105,10 +105,10 @@ export default function KelolaPeminjamanPage() {
         const savedLoan = await res.json();
         setLoans((prev) => [savedLoan, ...prev]);
         
-        // Update stok buku di state lokal agar form tidak perlu direfresh
         setBooks(books.map(b => b.id === selectedBook.id ? { ...b, stok: b.stok - 1 } : b));
 
         setStudentName('');
+        setStudentClass(''); // RESET KELAS
         setSelectedBook({ id: null, title: '' });
         setBookQuery('');
         setPage(1);
@@ -139,7 +139,6 @@ export default function KelolaPeminjamanPage() {
         const updatedLoan = await res.json();
         setLoans((prev) => prev.map((l) => (l.id === loan.id ? updatedLoan : l)));
         
-        // Update stok buku di state lokal
         setBooks(books.map(b => b.id === loan.bukuId ? { ...b, stok: b.stok + 1 } : b));
         
         setNotification({ show: true, message: 'Buku berhasil dikembalikan!' });
@@ -161,10 +160,7 @@ export default function KelolaPeminjamanPage() {
       <main className="flex-1 px-6 md:px-10 py-8 max-w-6xl">
         <Header searchValue={search} onSearchChange={setSearch} />
 
-        {/* Hapus overflow-hidden dari sini */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8 relative">
-          
-          {/* Pindahkan pembungkus overflow-hidden khusus untuk dekorasi latar saja */}
           <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
             <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-blue-50" />
           </div>
@@ -173,7 +169,8 @@ export default function KelolaPeminjamanPage() {
             <span className="text-brand text-xl leading-none">+</span> Catat Peminjaman Baru
           </h3>
 
-          <form onSubmit={handleSubmit} className="relative grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+          {/* GRID DIPERBARUI UNTUK MENAMPUNG KELAS */}
+          <form onSubmit={handleSubmit} className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[1.5fr_0.8fr_1.5fr_auto] gap-4 items-end">
             <div>
               <label className="block text-sm text-gray-600 mb-1.5">Nama Peminjam</label>
               <div className="relative">
@@ -182,10 +179,22 @@ export default function KelolaPeminjamanPage() {
                   required
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="Masukkan nama lengkap..."
+                  placeholder="Nama lengkap..."
                   className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
+            </div>
+
+            {/* INPUT KELAS BARU */}
+            <div>
+              <label className="block text-sm text-gray-600 mb-1.5">Kelas</label>
+              <input
+                required
+                value={studentClass}
+                onChange={(e) => setStudentClass(e.target.value)}
+                placeholder="Contoh: 4A"
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+              />
             </div>
 
             <div className="relative">
@@ -202,7 +211,7 @@ export default function KelolaPeminjamanPage() {
                   }}
                   onFocus={() => setShowBookOptions(true)}
                   onBlur={() => setTimeout(() => setShowBookOptions(false), 200)}
-                  placeholder="Cari / Pilih judul buku..."
+                  placeholder="Cari buku..."
                   className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 cursor-pointer"
                 />
               </div>
@@ -266,7 +275,10 @@ export default function KelolaPeminjamanPage() {
                   <tr key={loan.id} className="border-b border-gray-50 last:border-0 align-top">
                     <td className="px-5 py-4 text-gray-400 font-medium">{loan.kodePinjam}</td>
                     <td className="px-5 py-4">
-                      <p className="font-semibold text-gray-800">{loan.namaPeminjam}</p>
+                      {/* TAMPILAN NAMA DAN KELAS */}
+                      <p className="font-semibold text-gray-800">
+                        {loan.namaPeminjam} <span className="text-gray-400 font-normal ml-1">(Kelas {loan.kelas || '-'})</span>
+                      </p>
                       <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
                         <BookIcon className="w-3 h-3" /> {loan.buku?.judul || 'Buku Dihapus'}
                       </p>
@@ -338,7 +350,6 @@ export default function KelolaPeminjamanPage() {
         </div>
       </main>
 
-      {/* POPUP 1: KONFIRMASI PENGEMBALIAN */}
       {returnConfirm.show && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-xl">
@@ -364,7 +375,6 @@ export default function KelolaPeminjamanPage() {
         </div>
       )}
 
-      {/* POPUP 2: NOTIFIKASI SUKSES / GAGAL */}
       {notification.show && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-xl">

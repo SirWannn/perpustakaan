@@ -23,10 +23,11 @@ export async function POST(request) {
       data: {
         kodePinjam: body.kodePinjam,
         namaPeminjam: body.namaPeminjam,
+        kelas: body.kelas, // <--- Tambahkan baris ini agar tersimpan
         bukuId: parseInt(body.bukuId),
         tenggatWaktu: new Date(body.tenggatWaktu),
       },
-      include: { buku: true } // Return beserta data buku untuk UI
+      include: { buku: true }
     });
 
     // Opsional: Kurangi stok buku

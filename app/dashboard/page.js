@@ -52,7 +52,7 @@ export default function DashboardPage() {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
 
-      <main className="flex-1 px-6 md:px-10 py-8 max-w-6xl">
+      <main className="flex-1 px-4 md:px-10 py-6 md:py-8 pb-24 md:pb-8 max-w-6xl w-full">
         {/* Menyembunyikan kolom pencarian khusus di halaman ini */}
         <Header hideSearch={true} />
 

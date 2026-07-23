@@ -1,8 +1,11 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Perpustakaan Digital - SDN Cijambe 1',
-  description: 'Sistem manajemen perpustakaan digital untuk SDN Cijambe 1',
+  title: "Perpustakaan Digital - SDN Cijambe 1",
+  description: "Sistem Kelola Perpustakaan SDN Cijambe 1",
+  icons: {
+    icon: '/logo.png', // Menarik logo dari folder public untuk tab browser
+  },
 };
 
 export default function RootLayout({ children }) {

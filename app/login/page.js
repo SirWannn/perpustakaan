@@ -10,6 +10,7 @@ import {
   ArrowRightIcon,
   ShieldIcon,
 } from '@/components/icons';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -57,9 +58,16 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center bg-gray-100 px-4 py-10">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
         <div className="flex flex-col items-center text-center mb-7">
-          <div className="w-16 h-16 rounded-full bg-blue-50 border-2 border-blue-100 flex items-center justify-center text-2xl mb-4">
-            📚
-          </div>
+          <div className="w-20 h-20 relative mb-4">
+  <Image 
+    src="/logo.png" 
+    alt="Logo SDN Cijambe 1" 
+    fill 
+    className="object-contain"
+    sizes="80px"
+    priority
+  />
+</div>
           <h1 className="text-xl font-bold text-gray-800 leading-snug">
             Perpustakaan
             <br />

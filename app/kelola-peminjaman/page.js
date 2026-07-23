@@ -166,7 +166,7 @@ export default function KelolaPeminjamanPage() {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
 
-      <main className="flex-1 px-6 md:px-10 py-8 max-w-6xl">
+      <main className="flex-1 px-4 md:px-10 py-6 md:py-8 pb-24 md:pb-8 max-w-6xl w-full">
         <Header searchValue={search} onSearchChange={setSearch} placeholder="Cari peminjam atau buku..." />
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8 relative">

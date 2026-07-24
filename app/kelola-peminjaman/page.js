@@ -303,7 +303,7 @@ export default function KelolaPeminjamanPage() {
                         {loan.namaPeminjam} <span className="text-gray-400 font-normal ml-1">(Kelas {loan.kelas || '-'})</span>
                       </p>
                       <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                        <BookIcon className="w-3 h-3" /> {loan.buku?.judul || 'Buku Dihapus'}
+                        <BookIcon className="w-3 h-3" /> {loan.judulBukuSnapshot || loan.buku?.judul || 'Buku Dihapus'}
                       </p>
                     </td>
                     <td className="px-5 py-4 text-gray-600">{formatDate(loan.tanggalPinjam)}</td>
@@ -378,7 +378,7 @@ export default function KelolaPeminjamanPage() {
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-xl">
             <h3 className="text-lg font-bold text-gray-800 mb-2">Konfirmasi Pengembalian</h3>
             <p className="text-sm text-gray-600 mb-6">
-              Buku <b>"{returnConfirm.loanData?.buku?.judul}"</b> telah dikembalikan oleh peminjam?
+              Buku <b>"{returnConfirm.loanData?.judulBukuSnapshot || returnConfirm.loanData?.buku?.judul}"</b> telah dikembalikan oleh peminjam?
             </p>
             <div className="flex gap-3">
               <button

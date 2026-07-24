@@ -75,7 +75,7 @@ export default function DashboardPage() {
             icon="👥"
             iconBg="bg-green-100"
             iconColor="text-green-600"
-            badge="Peminjam Unik"
+            badge="Peminjam Aktif"
             badgeColor="bg-gray-100 text-gray-500"
             label="Total Peminjam"
             value={isLoading ? "..." : data?.stats?.totalPeminjam}
@@ -139,7 +139,7 @@ export default function DashboardPage() {
                       <BookIcon className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{loan.buku?.judul || 'Buku Dihapus'}</p>
+                      <p className="text-sm font-medium text-gray-800 truncate">{loan.judulBukuSnapshot || loan.buku?.judul || 'Buku Dihapus'}</p>
                       <p className="text-xs text-gray-500 truncate">Oleh: {loan.namaPeminjam}</p>
                     </div>
                     <span className="text-xs text-gray-400 whitespace-nowrap">

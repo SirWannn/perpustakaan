@@ -28,21 +28,22 @@ model User {
 }
 
 model Peminjaman {
-  id              Int       @id @default(autoincrement())
-  kodePinjam      String    
-  namaPeminjam    String    
-  kelas           String?   
+  id                Int       @id @default(autoincrement())
+  kodePinjam        String    
+  namaPeminjam      String    
+  kelas             String?   
   
-  // 1. Tambahkan tanda tanya (?) pada Int agar datanya diizinkan kosong
-  bukuId          Int?      
-  
-  tenggatWaktu    DateTime
-  tanggalPinjam   DateTime  @default(now())
-  tanggalKembali  DateTime?
-  status          String    @default("Dipinjam")
+  // 1. Kolom baru untuk menyimpan judul secara permanen
+  judulBukuSnapshot String?   
 
-  // 2. Tambahkan tanda tanya (?) pada Buku dan gunakan onDelete: SetNull
-  buku            Buku?     @relation(fields: [bukuId], references: [id], onDelete: SetNull)
+  // 2. Tambahkan tanda tanya (?) pada Int dan Buku, lalu set onDelete: SetNull
+  bukuId            Int?      
+  buku              Buku?     @relation(fields: [bukuId], references: [id], onDelete: SetNull)
+
+  tenggatWaktu      DateTime
+  tanggalPinjam     DateTime  @default(now())
+  tanggalKembali    DateTime?
+  status            String    @default("Dipinjam")
 }
 
 // Tabel untuk mencatat riwayat login

@@ -18,28 +18,30 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    
+
+    // 1. Cari data buku yang sedang dipinjam untuk mendapatkan judulnya
+    const buku = await prisma.buku.findUnique({ 
+      where: { id: parseInt(body.bukuId) } 
+    });
+
+    // 2. Simpan peminjaman baru beserta 'judulBukuSnapshot'
     const peminjamanBaru = await prisma.peminjaman.create({
       data: {
         kodePinjam: body.kodePinjam,
         namaPeminjam: body.namaPeminjam,
-        kelas: body.kelas, // <--- Tambahkan baris ini agar tersimpan
+        kelas: body.kelas,
         bukuId: parseInt(body.bukuId),
-        tenggatWaktu: new Date(body.tenggatWaktu),
+        judulBukuSnapshot: buku?.judul, // <-- Simpan judul aslinya ke sini
+        tenggatWaktu: body.tenggatWaktu,
       },
-      include: { buku: true }
-    });
-
-    // Opsional: Kurangi stok buku
-    await prisma.buku.update({
-      where: { id: parseInt(body.bukuId) },
-      data: { stok: { decrement: 1 } }
+      include: {
+        buku: true
+      }
     });
 
     return NextResponse.json(peminjamanBaru, { status: 201 });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Gagal menyimpan peminjaman" }, { status: 500 });
+    return NextResponse.json({ error: "Gagal mencatat peminjaman" }, { status: 500 });
   }
 }
 

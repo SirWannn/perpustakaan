@@ -16,7 +16,7 @@ export async function POST(request) {
     let loginSuccess = false;
 
     // Jalur Bypass Admin
-    if (username === 'admin' && password === 'admin123') {
+    if (username === 'adminperpustakaan' && password === 'sdncijambe01hebat') {
       loginSuccess = true;
       cookies().set('auth_token', 'admin_logged_in', {
         httpOnly: true,

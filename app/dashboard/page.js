@@ -6,6 +6,8 @@ import Header from '@/components/Header';
 import StatCard from '@/components/StatCard';
 import { BookIcon } from '@/components/icons';
 
+export const dynamic = 'force-dynamic';
+
 // Fungsi untuk menghitung jarak waktu menjadi "Hari ini", "Kemarin", dll.
 function getRelativeTime(dateString) {
   const date = new Date(dateString);

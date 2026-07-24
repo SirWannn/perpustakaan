@@ -13,6 +13,8 @@ import {
   BookIcon,
 } from '@/components/icons';
 
+export const dynamic = 'force-dynamic';
+
 const PAGE_SIZE = 5;
 
 const emptyForm = { 

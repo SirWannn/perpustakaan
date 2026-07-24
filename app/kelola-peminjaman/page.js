@@ -6,6 +6,8 @@ import Header from '@/components/Header';
 import { statusStyles } from '@/lib/data'; 
 import { UserIcon, BookIcon, SaveIcon, UndoIcon, ChevronLeftIcon, ChevronRightIcon } from '@/components/icons';
 
+export const dynamic = 'force-dynamic';
+
 const PAGE_SIZE = 5;
 
 // Fungsi format tanggal untuk tampilan

@@ -34,7 +34,8 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const res = await fetch('/api/dashboard');
+        // Tambahkan opsi cache: 'no-store' di sini
+        const res = await fetch('/api/dashboard', { cache: 'no-store' });
         const json = await res.json();
         setData(json);
       } catch (error) {

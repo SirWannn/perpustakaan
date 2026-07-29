@@ -38,11 +38,13 @@ export default function KelolaPeminjamanPage() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const resLoans = await fetch('/api/peminjaman');
+        // Tambahkan opsi cache: 'no-store' di sini
+        const resLoans = await fetch('/api/peminjaman', { cache: 'no-store' });
         const dataLoans = await resLoans.json();
         setLoans(dataLoans);
 
-        const resBooks = await fetch('/api/buku');
+        // Tambahkan opsi cache: 'no-store' di sini juga
+        const resBooks = await fetch('/api/buku', { cache: 'no-store' });
         const dataBooks = await resBooks.json();
         setBooks(dataBooks);
       } catch (error) {

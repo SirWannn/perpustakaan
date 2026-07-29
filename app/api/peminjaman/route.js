@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache'; // <-- 1. Impor fitur reset cache
 
 // Mengambil semua data peminjaman (GET)
 export async function GET() {
@@ -23,7 +24,6 @@ export async function POST(request) {
       where: { id: parseInt(body.bukuId) } 
     });
 
-    // 1. Simpan peminjaman baru
     const peminjamanBaru = await prisma.peminjaman.create({
       data: {
         kodePinjam: body.kodePinjam,
@@ -38,13 +38,17 @@ export async function POST(request) {
       }
     });
 
-    // 2. PERBAIKAN: Kurangi stok buku 1 saat dipinjam
     if (buku) {
       await prisma.buku.update({
         where: { id: parseInt(body.bukuId) },
-        data: { stok: { decrement: 1 } } // Catatan: Jika nama kolom Anda di database adalah jumlahBuku, ganti 'stok' menjadi 'jumlahBuku'
+        data: { stok: { decrement: 1 } } 
       });
     }
+
+    // <-- 2. PERINTAH RESET CACHE (PENTING!) -->
+    revalidatePath('/dashboard');
+    revalidatePath('/api/dashboard');
+    revalidatePath('/kelola-peminjaman');
 
     return NextResponse.json(peminjamanBaru, { status: 201 });
   } catch (error) {
@@ -58,7 +62,6 @@ export async function PUT(request) {
     const body = await request.json();
     const { id, bukuId } = body;
 
-    // 1. PERBAIKAN: Cek dulu apakah statusnya sudah selesai
     const cekStatus = await prisma.peminjaman.findUnique({
       where: { id: Number(id) }
     });
@@ -67,7 +70,6 @@ export async function PUT(request) {
       return NextResponse.json({ error: "Buku ini sudah dikembalikan" }, { status: 400 });
     }
 
-    // 2. Update status menjadi Selesai
     const updatePinjam = await prisma.peminjaman.update({
       where: { id: Number(id) },
       data: {
@@ -77,11 +79,15 @@ export async function PUT(request) {
       include: { buku: true }
     });
 
-    // 3. Tambahkan kembali stok buku
     await prisma.buku.update({
       where: { id: Number(bukuId) },
-      data: { stok: { increment: 1 } } // Catatan: Sesuaikan 'stok' dengan nama kolom di database jika berbeda
+      data: { stok: { increment: 1 } }
     });
+
+    // <-- 3. PERINTAH RESET CACHE (PENTING!) -->
+    revalidatePath('/dashboard');
+    revalidatePath('/api/dashboard');
+    revalidatePath('/kelola-peminjaman');
 
     return NextResponse.json(updatePinjam, { status: 200 });
   } catch (error) {

@@ -73,7 +73,8 @@ export default function KelolaPeminjamanPage() {
       (l) =>
         l.namaPeminjam.toLowerCase().includes(search.toLowerCase()) ||
         (l.kelas && l.kelas.toLowerCase().includes(search.toLowerCase())) ||
-        l.buku.judul.toLowerCase().includes(search.toLowerCase()) ||
+        // PERBAIKAN: Gunakan optional chaining (?.) dan fallback ke snapshot atau string kosong
+        (l.judulBukuSnapshot || l.buku?.judul || '').toLowerCase().includes(search.toLowerCase()) ||
         l.kodePinjam.toLowerCase().includes(search.toLowerCase())
     );
   }, [loans, search]);

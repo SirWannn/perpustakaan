@@ -123,7 +123,7 @@ export default function LoginPage() {
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 
-          <div className="flex items-center justify-between text-sm pt-1">
+          <div className="flex items-center text-sm pt-1">
             <label className="flex items-center gap-2 text-gray-600 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -133,9 +133,6 @@ export default function LoginPage() {
               />
               Ingat Saya
             </label>
-            <a href="#" className="text-brand font-medium hover:underline">
-              Lupa Password?
-            </a>
           </div>
 
           <button
@@ -148,10 +145,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-center gap-1.5 text-xs text-gray-400">
-          <ShieldIcon className="w-3.5 h-3.5" />
-          Aman &amp; Terenkripsi
-        </div>
+        {/* Removed 'Aman & Terenkripsi' line for a cleaner login card */}
       </div>
     </main>
   );

@@ -279,8 +279,9 @@ export default function KelolaPeminjamanPage() {
           <h3 className="text-lg font-bold text-gray-800">Daftar Peminjaman Aktif</h3>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-max w-full text-sm">
             <thead>
               <tr className="text-left text-gray-400 border-b border-gray-100">
                 <th className="font-medium px-5 py-3">ID Pinjam</th>
@@ -351,6 +352,7 @@ export default function KelolaPeminjamanPage() {
               )}
             </tbody>
           </table>
+          </div>
 
           <div className="flex items-center justify-between px-5 py-3 text-sm text-gray-500 border-t border-gray-100">
             <span>

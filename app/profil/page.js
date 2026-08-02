@@ -15,21 +15,16 @@ function formatDateTime(dateString) {
 }
 
 export default function ProfilPage() {
-  const [search, setSearch] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [notification, setNotification] = useState({ show: false, message: '' });
-  
-  // State untuk menyimpan data dinamis
-  const [loginHistory, setLoginHistory] = useState([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(true);
+  const [loginHistory, setLoginHistory] = useState([]);
 
-  const [profile, setProfile] = useState({
-    nama: 'Wandi',
-    email: 'admin@sdncijambe1.sch.id',
-    telepon: '0812-3456-7890',
+  const profile = {
+    nama: 'Operator',
+    email: 'ohwannn7@gmail.com',
+    telepon: '0813-2292-272',
     peran: 'Administrator Utama',
-    instansi: 'SDN Cijambe 1'
-  });
+    instansi: 'SDN Cijambe 1',
+  };
 
   // Ambil data riwayat login saat halaman dimuat
   useEffect(() => {
@@ -39,22 +34,13 @@ export default function ProfilPage() {
         const data = await res.json();
         setLoginHistory(data);
       } catch (error) {
-        console.error("Gagal load riwayat:", error);
+        console.error('Gagal load riwayat:', error);
       } finally {
         setIsLoadingLogs(false);
       }
     };
     fetchLogs();
   }, []);
-
-  const handleSave = (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      setNotification({ show: true, message: 'Data profil Anda berhasil diperbarui!' });
-    }, 800);
-  };
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -91,43 +77,20 @@ export default function ProfilPage() {
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
               <h3 className="font-semibold text-gray-800 mb-4 border-b border-gray-100 pb-2">Detail Akun</h3>
-              <form onSubmit={handleSave} className="space-y-4">
+              <div className="space-y-4 text-sm text-gray-700">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Nama Lengkap</label>
-                  <input
-                    type="text"
-                    value={profile.nama}
-                    onChange={(e) => setProfile({ ...profile, nama: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:bg-white transition-colors"
-                  />
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Nama Lengkap</p>
+                  <p className="rounded-2xl bg-gray-50 border border-gray-200 px-4 py-3">{profile.nama}</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={profile.email}
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:bg-white transition-colors"
-                  />
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Email</p>
+                  <p className="rounded-2xl bg-gray-50 border border-gray-200 px-4 py-3">{profile.email}</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">No. Telepon</label>
-                  <input
-                    type="text"
-                    value={profile.telepon}
-                    onChange={(e) => setProfile({ ...profile, telepon: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:bg-white transition-colors"
-                  />
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">No. Telepon</p>
+                  <p className="rounded-2xl bg-gray-50 border border-gray-200 px-4 py-3">{profile.telepon}</p>
                 </div>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="w-full flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white font-medium py-2.5 rounded-lg mt-2 transition-colors disabled:opacity-70"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
-                  {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
-                </button>
-              </form>
+              </div>
             </div>
           </div>
 
@@ -198,26 +161,6 @@ export default function ProfilPage() {
         </div>
       </main>
 
-      {notification.show && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-8 text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-2 bg-green-500"></div>
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5 shadow-inner">
-              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Berhasil!</h3>
-            <p className="text-sm text-gray-500 mb-8">{notification.message}</p>
-            <button
-              onClick={() => setNotification({ show: false, message: '' })}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl transition-colors"
-            >
-              Tutup
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
